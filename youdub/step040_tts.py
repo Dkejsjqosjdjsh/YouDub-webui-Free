@@ -9,6 +9,7 @@ import numpy as np
 from .utils import save_wav, save_wav_norm
 from .step041_tts_bytedance import tts as bytedance_tts
 from .step042_tts_xtts import tts as xtts_tts
+from .edge_tts_wrapper import edge_tts_generate
 from .cn_tx import TextNorm
 from audiostretchy.stretch import stretch_audio
 normalizer = TextNorm()
@@ -33,6 +34,8 @@ def adjust_audio_length(wav_path, desired_length, sample_rate = 24000, min_speed
     return wav[:int(desired_length*sample_rate)], desired_length
 
 def generate_wavs(folder, force_bytedance=False):
+    tts_engine = os.getenv('TTS_ENGINE', 'edge-tts')
+    logger.info(f"使用 TTS 引擎: {tts_engine}")
     transcript_path = os.path.join(folder, 'translation.json')
     output_folder = os.path.join(folder, 'wavs')
     if not os.path.exists(output_folder):
@@ -52,9 +55,12 @@ def generate_wavs(folder, force_bytedance=False):
         text = preprocess_text(line['translation'])
         output_path = os.path.join(output_folder, f'{str(i).zfill(4)}.wav')
         speaker_wav = os.path.join(folder, 'SPEAKER', f'{speaker}.wav')
-        if num_speakers == 1:
+        if tts_engine == 'edge-tts':
+            voice = os.getenv('EDGE_TTS_VOICE', 'zh-CN-XiaoxiaoNeural')
+            edge_tts_generate(text, output_path, voice=voice)
+        elif num_speakers == 1:
             bytedance_tts(text, output_path, speaker_wav, voice_type='BV701_streaming')
-        elif force_bytedance:
+        elif force_bytedance or tts_engine == 'bytedance':
             bytedance_tts(text, output_path, speaker_wav)
         else:
             xtts_tts(text, output_path, speaker_wav)

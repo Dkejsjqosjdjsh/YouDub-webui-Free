@@ -10,8 +10,9 @@ from youdub.step070_upload_bilibili import upload_all_videos_under_folder
 from youdub.do_everything import do_everything
 import os
 from dotenv import load_dotenv, set_key
+from youdub.edge_tts_wrapper import get_edge_voices
 
-def update_env(openai_key, openai_base, bytedance_appid, bytedance_token, hf_token):
+def update_env(openai_key, openai_base, bytedance_appid, bytedance_token, hf_token, tts_engine, edge_voice):
     env_path = '.env'
     if not os.path.exists(env_path):
         with open(env_path, 'w') as f:
@@ -22,21 +23,25 @@ def update_env(openai_key, openai_base, bytedance_appid, bytedance_token, hf_tok
     set_key(env_path, 'BYTEDANCE_APPID', bytedance_appid)
     set_key(env_path, 'BYTEDANCE_ACCESS_TOKEN', bytedance_token)
     set_key(env_path, 'HF_TOKEN', hf_token)
+    set_key(env_path, 'TTS_ENGINE', tts_engine)
+    set_key(env_path, 'EDGE_TTS_VOICE', edge_voice)
     load_dotenv(override=True)
-    return "配置已更新！現在您可以開始使用，無需信用卡驗證。"
+    return f"配置已更新！當前使用 {tts_engine} 引擎。現在您可以開始使用，無需信用卡驗證。"
 
 settings_interface = gr.Interface(
     fn=update_env,
     inputs=[
         gr.Textbox(label='OpenAI API Key', placeholder='sk-...', value=os.getenv('OPENAI_API_KEY', '')),
         gr.Textbox(label='OpenAI API Base', placeholder='https://api.openai.com/v1', value=os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')),
-        gr.Textbox(label='ByteDance AppID', value=os.getenv('BYTEDANCE_APPID', '')),
-        gr.Textbox(label='ByteDance Access Token', value=os.getenv('BYTEDANCE_ACCESS_TOKEN', '')),
+        gr.Radio(['edge-tts', 'bytedance', 'xtts'], label='TTS 引擎 (推薦使用 edge-tts，完全免費)', value=os.getenv('TTS_ENGINE', 'edge-tts')),
+        gr.Dropdown(get_edge_voices(), label='Edge-TTS 語音選擇', value=os.getenv('EDGE_TTS_VOICE', 'zh-CN-XiaoxiaoNeural')),
+        gr.Textbox(label='ByteDance AppID (若使用 bytedance 引擎則必填)', value=os.getenv('BYTEDANCE_APPID', '')),
+        gr.Textbox(label='ByteDance Access Token (若使用 bytedance 引擎則必填)', value=os.getenv('BYTEDANCE_ACCESS_TOKEN', '')),
         gr.Textbox(label='HuggingFace Token (用於 WhisperX)', value=os.getenv('HF_TOKEN', '')),
     ],
     outputs='text',
     title='免驗證設置',
-    description='在此輸入您的 API 密鑰。您可以通過簡單註冊各平台獲取免費額度，無需信用卡。'
+    description='在此輸入您的 API 密鑰或選擇免費引擎。Edge-TTS 模式無需任何密鑰即可一直免費使用。'
 )
 
 do_everything_interface = gr.Interface(
